@@ -1,12 +1,13 @@
 """
-A new base class for Django models, which provides them with a better and random
+A new base class for Django models, 
+which provides them with a better and random
 looking primary key for the 'id' field.
 
-This solves the problem of having predictable, sequentially numbered primary keys
+This solves the problem of having predictable, 
+sequentially numbered primary keys
 for Django models.
 
 Just use 'RandomPrimaryIdModel' as base class for your Django models. That's all.
-
 
 The generated keys look similar to what you know from URL shorteners. Here are some
 examples:
@@ -40,8 +41,8 @@ import string
 import random
 
 from django.db.utils import IntegrityError
-from django.db       import models, transaction
-from django.db       import transaction
+from django.db import models, transaction
+
 
 class RandomPrimaryIdModel(models.Model):
     """
@@ -89,23 +90,26 @@ class RandomPrimaryIdModel(models.Model):
     Use _FIRSTIDCHAR and _IDCHAR to tune the characters that may appear in the key.
 
     """
-    KEYPREFIX         = ""
-    KEYSUFFIX         = ""
+    KEYPREFIX = ""
+    KEYSUFFIX = ""
     CRYPT_KEY_LEN_MIN = 5
     CRYPT_KEY_LEN_MAX = 9
-    _FIRSTIDCHAR      = string.ascii_letters                  # First char: Always a letter
-    _IDCHARS          = string.digits + string.ascii_letters  # Letters and digits for the rest
+    # First char: Always a letter
+    _FIRSTIDCHAR = string.ascii_letters
+    _IDCHARS = string.digits + string.ascii_letters
+    # Letters and digits for the rest
 
     """ Our new ID field """
-    id = models.CharField(db_index    = True,
-                          primary_key = True,
-                          max_length  = CRYPT_KEY_LEN_MAX+1+len(KEYPREFIX)+len(KEYSUFFIX),
-                          unique      = True)
+    id = models.CharField(db_index=True,
+                          primary_key=True,
+                          max_length=CRYPT_KEY_LEN_MAX + 1 +
+                          len(KEYPREFIX) + len(KEYSUFFIX),
+                          unique=True)
 
     def __init__(self, *args, **kwargs):
         """
-        Nothing to do but to call the super class' __init__ method and initialize a few vars.
-
+        Nothing to do but to call
+        the super class' __init__ method and initialize a few vars.
         """
         super(RandomPrimaryIdModel, self).__init__(*args, **kwargs)
         self._retry_count = 0    # used for testing and debugging, nothing else
@@ -119,19 +123,17 @@ class RandomPrimaryIdModel(models.Model):
 
         Whatever is specified in KEYPREFIX or KEYSUFFIX is pre/appended
         to the generated key.
-
         """
         return self.KEYPREFIX + random.choice(self._FIRSTIDCHAR) + \
-               ''.join([ random.choice(self._IDCHARS) for dummy in xrange(0, key_len-1) ]) + \
-               self.KEYSUFFIX
+            ''.join([ random.choice(self._IDCHARS) for dummy in range(0, key_len - 1) ]) + \
+            self.KEYSUFFIX
 
     def save(self, *args, **kwargs):
         """
-        Modified save() function, which selects a special unique ID if necessary.
-
-        Calls the save() method of the first model.Models base class it can find
-        in the base-class list.
-
+        Modified save() function,
+        which selects a special unique ID if necessary.
+        Calls the save() method of the first model.
+        Models base class it can find in the base-class list.
         """
         if self.id:
             # Apparently, we know our ID already, so we don't have to
@@ -139,27 +141,33 @@ class RandomPrimaryIdModel(models.Model):
             super(RandomPrimaryIdModel, self).save(*args, **kwargs)
             return
 
-        try_key_len                     = self.CRYPT_KEY_LEN_MIN
+        try_key_len = self.CRYPT_KEY_LEN_MIN
         try_since_last_key_len_increase = 0
         while try_key_len <= self.CRYPT_KEY_LEN_MAX:
             # Randomly choose a new unique key
             _id = self._make_random_key(try_key_len)
-            sid = transaction.savepoint()       # Needed for Postgres, doesn't harm the others
+            sid = transaction.savepoint()
+            # Needed for Postgres, doesn't harm the others
             try:
                 if kwargs is None:
                     kwargs = dict()
-                kwargs['force_insert'] = True           # If force_insert is already present in
-                                                        # kwargs, we want to make sure it's
-                                                        # overwritten. Also, by putting it here
-                                                        # we can be sure we don't accidentally
-                                                        # specify it twice.
+                # If force_insert is already present in
+                kwargs['force_insert'] = True
+                # kwargs, we want to make sure it's
+                # overwritten. Also, by putting it here
+                # we can be sure we don't accidentally
+                # specify it twice.
                 self.id = _id
                 super(RandomPrimaryIdModel, self).save(*args, **kwargs)
-                break                                   # This was a success, so we are done here
+                break
+                # This was a success, so we are done here
 
-            except IntegrityError, e:                   # Apparently, this key is already in use
-                # Only way to differentiate between different IntegrityErrors is to look
-                # into the message string. Too bad. But I need to make sure I only catch
+            except IntegrityError, e:
+                # Apparently, this key is already in use
+                # Only way to differentiate between
+                # different IntegrityErrors is to look
+                # into the message string. Too bad.
+                # But I need to make sure I only catch
                 # the ones for the 'id' column.
                 #
                 # Sadly, error messages from different databases look different and Django does
@@ -176,16 +184,19 @@ class RandomPrimaryIdModel(models.Model):
                 msg = e.args[-1]
                 if msg.endswith("for key 'PRIMARY'") or msg == "column id is not unique" or \
                         "Key (id)=" in msg:
-                    transaction.savepoint_rollback(sid) # Needs to be done for Postgres, since
-                                                        # otherwise the whole transaction is
-                                                        # cancelled, if this is part of a larger
-                                                        # transaction.
+                    # Needs to be done for Postgres, since
+                    transaction.savepoint_rollback(sid)
+                    # otherwise the whole transaction is
+                    # cancelled, if this is part of a larger
+                    # transaction.
 
-                    self._retry_count += 1              # Maintained for debugging/testing purposes
+                    self._retry_count += 1
+                    # Maintained for debugging/testing purposes
                     try_since_last_key_len_increase += 1
                     if try_since_last_key_len_increase == try_key_len:
                         # Every key-len tries, we increase the key length by 1.
-                        # This means we only try a few times at the start, but then try more
+                        # This means we only try a few times at the start,
+                        # but then try more
                         # and more for larger key sizes.
                         try_key_len += 1
                         try_since_last_key_len_increase = 0
@@ -194,11 +205,14 @@ class RandomPrimaryIdModel(models.Model):
                     raise e
 
         else:
-            # while ... else (just as a reminder): Execute 'else' if while loop is exited normally.
-            # In our case, this only happens if we finally run out of attempts to find a key.
+            # while ... else (just as a reminder):
+            # Execute 'else' if while loop is exited normally.
+            # In our case, this only happens if we finally run out of attempts
+            # to find a key.
             self.id = None
-            raise IntegrityError("Could not produce unique ID for model of type %s" % type(self))
+            raise IntegrityError(
+                "Could not produce unique ID for model of type %s" % type(self)
+            )
 
     class Meta:
         abstract = True
-
