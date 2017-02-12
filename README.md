@@ -22,3 +22,5 @@ a digit, **except the first chracter**, which is always a letter.
 * With any additional character in the key length, the key space increases 62 fold. Just 5 characters already give you more than 768 million different keys. 
 * If the key space gets tighter (can't find unused key after a few tries), the key length is being increased automatically.
 * The starting key length and maximum key length are tunable. See the doc-string of the RandomPrimaryIdModel class for more information.
+
+Originally forked from repo of @jbrendel
