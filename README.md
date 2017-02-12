@@ -1,4 +1,5 @@
-
+Django-RandomPrimary
+======
 A new base class for Django models, which provides them with a better
 and random looking primary key for the 'id' field.
 
