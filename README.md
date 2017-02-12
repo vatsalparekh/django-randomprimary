@@ -1,5 +1,5 @@
 # Django-RandomPrimary
-======
+
 ## feature
 * Gives a hex, unpredictable, not-sequentially numbered  primary key id to your model rows
 
@@ -7,7 +7,7 @@
 * Just use as base class for your Django Model `RandomPrimaryIdModel` & your models will get the random IDs
 
 
-> Examples of generated keys:
+## Examples of generated keys:
 
     Ada6z
     UFLX1
